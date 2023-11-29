@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./style.css">
+    <title>A chat page</title>
+</head>
+
+
+<body>
+    <form id="joinForm">
+        <label for="phoneNum">Phone number:</label>
+        <input type="text" id="phoneNum" name="phoneNum" required>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+        <label for="roomId">Room ID:</label>
+        <input type="text" id="roomId" name="roomId" required>
+        <button type="submit">Join</button>
+      </form>
+    <ul id="messages"></ul>
+    <span id="typing"></span>
+    <form id="form" action="">
+      <input id="input" autocomplete="off" /><button>Send</button>
+    </form>
+
+    
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<script>
+    // Gtting and assingining every HTML element to a javascript variable.
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const messages = document.getElementById("messages")
+    const typing = document.getElementById("typing")
+    const username = document.getElementById("username")
+    const phoneNum = document.getElementById("phoneNum")
+    const joinForm = document.getElementById("joinForm")
+    const roomId = document.getElementById("roomId")
+
+    //creating a websocket instance
+    const socket = io("http://localhost:340");
+
+    //Event listener to emit(send) client signup datas to the server including a "roomId" that is unique to only the clients in that room.
+    joinForm.addEventListener("submit", (e)=>{
+        if(phoneNum.value && username.value && roomId.value){
+            e.preventDefault()
+            socket.emit("join", phoneNum.value, username.value, roomId.value)
+            // phoneNum.value = ''
+            // username.value = ''
+            // roomId.value = ''
+        }
+    })
+
+    //Event listener to emit(send) chat messages to the server.
+    form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (input.value) {
+      socket.emit('sendMessage', input.value);
+      input.value = '';
+      typing.textContent = '';
+    }
+  });
+
+   //Event listener to send message to the server that pressing "Enter key" means client is not typing while pressing other keys means client is typing.
+  input.addEventListener("keypress", (e)=>{
+        if(e.key === "Enter"){
+         socket.emit("notTyping")
+        }else{
+        socket.emit("typing", "typing...")
+        }
+    })
+
+    //Event listener to send message to the server that pressing the back key means client is not typing.
+    input.addEventListener("keydown", ()=>{
+        socket.emit("notTyping")
+    })
+
+ //Event listener to send message to the server that not pressing any key means client is not typing.
+    input.addEventListener("keyup", ()=>{
+        socket.emit("notTyping")
+    })
+
+//Handling the display of emited join message and chat message.
+    socket.on("newMessage", (msg)=>{
+        const item = document.createElement("li")
+        item.textContent = msg
+        messages.appendChild(item)
+        window.scrollTo(0, document.body.scrollHeight);
+    })
+
+    //Handling the display of "typing..." message when client is typing.
+    socket.on("typing", (data)=>{
+        typing.textContent = data
+    })
+//Handling the display of nothing during keyup and keydown.
+    socket.on("notTyping", ()=>{
+        typing.textContent = ''
+    })
+
+</script>
+</body>
+</html>
